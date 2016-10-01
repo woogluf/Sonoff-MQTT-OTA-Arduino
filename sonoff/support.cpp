@@ -1,3 +1,10 @@
+#include <Arduino.h>
+#include <ESP8266WiFi.h>
+#include "support.h"
+#include "webserver.h"
+#ifdef USE_TICKER
+  #include <Ticker.h>           // RTC
+#endif  // USE_TICKER
 /*********************************************************************************************\
  * Config - Flash or Spiffs
 \*********************************************************************************************/
@@ -20,7 +27,7 @@ uint32_t getHash()
   uint8_t *bytes = (uint8_t*)&sysCfg;
 
   for (int i = 0; i < sizeof(SYSCFG); i++) hash += bytes[i]*(i+1);
-  return hash;  
+  return hash;
 }
 
 /*********************************************************************************************\
@@ -79,7 +86,7 @@ void CFG_Load()
       } else {
         addLog_P(LOG_LEVEL_ERROR, PSTR("Config: ERROR - Loading configuration failed"));
       }
-    } else {  
+    } else {
 #endif  // USE_SPIFFS
       struct SYSCFGH {
         unsigned long cfg_holder;
@@ -161,7 +168,7 @@ void initSpiffs()
         }
       }
     }
-  }  
+  }
 }
 #endif  // USE_SPIFFS
 
@@ -286,7 +293,7 @@ void WIFI_check_ip()
 void WIFI_Check(int param)
 {
   char log[LOGSZ];
-  
+
   _wificounter--;
   switch (param) {
   case WIFI_SMARTCONFIG:
@@ -310,7 +317,7 @@ void WIFI_Check(int param)
       }
       if (!_wifiConfigCounter) {
         if (_wificonfigflag == WIFI_SMARTCONFIG) WiFi.stopSmartConfig();
-        restartflag = 2;     
+        restartflag = 2;
       }
     } else {
       if (_wificounter <= 0) {
@@ -357,7 +364,7 @@ void WIFI_Connect(char *Hostname)
 
 /*********************************************************************************************\
  * Real Time Clock
- * 
+ *
  * Sources: Time by Michael Margolis and Paul Stoffregen (https://github.com/PaulStoffregen/Time)
  *          Timezone by Jack Christensen (https://github.com/JChristensen/Timezone)
 \*********************************************************************************************/
@@ -398,18 +405,18 @@ void breakTime(uint32_t timeInput, TIME_T &tm)
   time /= 60;                // now it is hours
   tm.Hour = time % 24;
   time /= 24;                // now it is days
-  tm.Wday = ((time + 4) % 7) + 1;  // Sunday is day 1 
-  
-  year = 0;  
+  tm.Wday = ((time + 4) % 7) + 1;  // Sunday is day 1
+
+  year = 0;
   days = 0;
   while((unsigned)(days += (LEAP_YEAR(year) ? 366 : 365)) <= time) {
     year++;
   }
-  tm.Year = year;            // year is offset from 1970 
-  
+  tm.Year = year;            // year is offset from 1970
+
   days -= LEAP_YEAR(year) ? 366 : 365;
   time -= days;              // now it is days in this year, starting at 0
-  
+
   days = 0;
   month = 0;
   monthLength = 0;
@@ -423,7 +430,7 @@ void breakTime(uint32_t timeInput, TIME_T &tm)
     } else {
       monthLength = monthDays[month];
     }
-    
+
     if (time >= monthLength) {
       time -= monthLength;
     } else {
@@ -431,15 +438,15 @@ void breakTime(uint32_t timeInput, TIME_T &tm)
     }
   }
   strlcpy(tm.MonthName, monthNames + (month *3), 4);
-  tm.Month = month + 1;      // jan is month 1  
+  tm.Month = month + 1;      // jan is month 1
   tm.Day = time + 1;         // day of month
 }
 
 uint32_t makeTime(TIME_T &tm)
-{   
-// assemble time elements into time_t 
+{
+// assemble time elements into time_t
 // note year argument is offset from 1970
-  
+
   int i;
   uint32_t seconds;
 
@@ -450,10 +457,10 @@ uint32_t makeTime(TIME_T &tm)
       seconds +=  SECS_PER_DAY;   // add extra days for leap years
     }
   }
-  
+
   // add days for this year, months start from 1
   for (i = 1; i < tm.Month; i++) {
-    if ((i == 2) && LEAP_YEAR(tm.Year)) { 
+    if ((i == 2) && LEAP_YEAR(tm.Year)) {
       seconds += SECS_PER_DAY * 29;
     } else {
       seconds += SECS_PER_DAY * monthDays[i-1];  // monthDay array starts from 0
@@ -463,7 +470,7 @@ uint32_t makeTime(TIME_T &tm)
   seconds+= tm.Hour * SECS_PER_HOUR;
   seconds+= tm.Minute * SECS_PER_MIN;
   seconds+= tm.Second;
-  return seconds; 
+  return seconds;
 }
 
 uint32_t toTime_t(TimeChangeRule r, int yr)
@@ -489,7 +496,7 @@ uint32_t toTime_t(TimeChangeRule r, int yr)
     tm.Month = m;
     tm.Year = yr - 1970;
     t = makeTime(tm);        // First day of the month, or first day of next month for "Last" rules
-    breakTime(t, tm); 
+    breakTime(t, tm);
     t += (7 * (w - 1) + (r.dow - tm.Wday + 7) % 7) * SECS_PER_DAY;
     if (r.week == 0) t -= 7 * SECS_PER_DAY;    //back up a week if this is a "Last" rule
     return t;
@@ -571,7 +578,7 @@ void rtc_init()
 #ifdef SEND_TELEMETRY_DS18B20
 /*********************************************************************************************\
  * DS18B20
- * 
+ *
  * Source: Marinus vd Broek https://github.com/ESP8266nu/ESPEasy
 \*********************************************************************************************/
 
@@ -579,7 +586,7 @@ uint8_t dsb_reset()
 {
   uint8_t r;
   uint8_t retries = 125;
-  
+
   pinMode(DSB_PIN, INPUT);
   do  {                                 // wait until the wire is high... just in case
     if (--retries == 0) return 0;
@@ -639,7 +646,7 @@ void dsb_write_bit(uint8_t v)
 void dsb_write(uint8_t ByteToWrite)
 {
   uint8_t bitMask;
-  
+
   for (bitMask = 0x01; bitMask; bitMask <<= 1)
     dsb_write_bit((bitMask & ByteToWrite) ? 1 : 0);
 }
@@ -670,7 +677,7 @@ boolean dsb_readTemp(float &t)
   lsb = dsb_read();
   msb = dsb_read();
   dsb_reset();
-  
+
   DSTemp = (msb << 8) + lsb;
   t = (float(DSTemp) * 0.0625);
   return (!isnan(t));
@@ -680,7 +687,7 @@ boolean dsb_readTemp(float &t)
 #ifdef SEND_TELEMETRY_DHT
 /*********************************************************************************************\
  * DHT11, DHT21 (AM2301), DHT22 (AM2302, AM2321)
- * 
+ *
  * Reading temperature or humidity takes about 250 milliseconds!
  * Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
  * Source: Adafruit Industries https://github.com/adafruit/DHT-sensor-library
@@ -700,7 +707,7 @@ void dht_readPrep()
 uint32_t dht_expectPulse(bool level)
 {
   uint32_t count = 0;
-  
+
   while (digitalRead(DHT_PIN) == level)
     if (count++ >= _maxcycles) return 0;
   return count;
@@ -711,7 +718,7 @@ boolean dht_read()
   char log[LOGSZ];
   uint32_t cycles[80];
   uint32_t currenttime = millis();
-  
+
   if ((currenttime - _lastreadtime) < 2000) {
     return _lastresult;
   }
@@ -805,7 +812,7 @@ boolean dht_readTempHum(bool S, float &t, float &h)
       break;
     }
   }
-  return (!isnan(t) && !isnan(h)); 
+  return (!isnan(t) && !isnan(h));
 }
 
 void dht_init()
@@ -840,11 +847,11 @@ void syslog(const char *message)
 void addLog(byte loglevel, const char *line)
 {
   char mxtime[9];
-  
+
   snprintf_P(mxtime, sizeof(mxtime), PSTR("%02d:%02d:%02d"), rtcTime.Hour, rtcTime.Minute, rtcTime.Second);
-  
+
 #ifdef DEBUG_ESP_PORT
-  DEBUG_ESP_PORT.printf("%s %s\n", mxtime, line);  
+  DEBUG_ESP_PORT.printf("%s %s\n", mxtime, line);
 #endif  // DEBUG_ESP_PORT
 #ifdef USE_SERIAL
   if (loglevel <= sysCfg.seriallog_level) Serial.printf("%s %s\n", mxtime, line);
@@ -862,12 +869,11 @@ void addLog(byte loglevel, const char *line)
 void addLog_P(byte loglevel, const char *formatP)
 {
   char mess[MESSZ];
-  
+
   snprintf_P(mess, sizeof(mess), formatP);
   addLog(loglevel, mess);
 }
 
 /*********************************************************************************************\
- * 
+ *
 \*********************************************************************************************/
-

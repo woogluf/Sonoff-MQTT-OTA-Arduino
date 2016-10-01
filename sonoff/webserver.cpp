@@ -1,10 +1,60 @@
+#include "support.h"
+#include "webserver.h"
+#include <DNSServer.h>
 #ifdef USE_WEBSERVER
+
+/* bof definit dans sonoff.ino */
+void do_cmnd(char *cmnd);
+
+void handleRoot();
+
+void handleConfig();
+
+void handleWifi1();
+
+void handleWifi0();
+
+void handleWifi(boolean scan);
+
+void handleMqtt();
+
+void handleLog();
+
+void handleSave();
+
+void handleReset();
+
+void handleUpgrade();
+
+void handleUpgradeStart();
+
+void handleUploadDone();
+
+void handleUploadLoop();
+
+void handleConsole();
+
+void handleAjax();
+
+void handleInfo();
+
+void handleRestart();
+
+void handleNotFound();
+/* Redirect to captive portal if we got a request for another domain. Return true in that case so the page handler do not try to handle the request again. */
+boolean captivePortal();
+int getRSSIasQuality(int RSSI);
+/** Is this an IP? */
+boolean isIp(String str);
+
 /*********************************************************************************************\
- * Web server and WiFi Manager 
- * 
- * Enables configuration and reconfiguration of WiFi credentials using a Captive Portal 
+ * Web server and WiFi Manager
+ *
+ * Enables configuration and reconfiguration of WiFi credentials using a Captive Portal
  * Source by AlexT (https://github.com/tzapu)
 \*********************************************************************************************/
+
+void handleWifi(boolean scan);
 
 const char HTTP_HEAD[] PROGMEM =
   "<!DOCTYPE html><html lang=\"en\">"
@@ -389,7 +439,7 @@ void handleWifi(boolean scan)
   }
 
   page += FPSTR(HTTP_FORM_WIFI);
-  
+
   char str[33];
   if (!strcmp(WIFI_HOSTNAME, DEF_WIFI_HOSTNAME)) {
     snprintf_P(str, sizeof(str), PSTR(DEF_WIFI_HOSTNAME), sysCfg.mqtt_topic, ESP.getChipId() & 0x1FFF);
@@ -449,7 +499,7 @@ void handleLog()
     page.replace("{a" + String(i), (i == sysCfg.seriallog_level) ? " selected " : " ");
     page.replace("{b" + String(i), (i == sysCfg.weblog_level) ? " selected " : " ");
     page.replace("{c" + String(i), (i == sysCfg.syslog_level) ? " selected " : " ");
-  }  
+  }
   page.replace("{l2}", String(sysCfg.syslog_host));
   page.replace("{lp}", String((int)SYS_LOG_PORT));
   page.replace("{l3}", String(sysCfg.syslog_port));
@@ -567,7 +617,7 @@ void handleUpgradeStart()
     snprintf_P(svalue, sizeof(svalue), PSTR("otaurl %s"), webServer->arg("o").c_str());
     do_cmnd(svalue);
   }
-  
+
   String page = FPSTR(HTTP_HEAD);
   page.replace("{v}", "Info");
   page += F("<div style='text-align:center;'><b>Upgrade started ...</b></div>");
@@ -626,9 +676,9 @@ void handleUploadLoop()
     Update.end();
     return;
   }
-  
+
   HTTPUpload& upload = webServer->upload();
-  
+
   if (upload.status == UPLOAD_FILE_START) {
     restartflag = 60;
     mqttcounter = 60;
@@ -819,7 +869,7 @@ void handleNotFound()
   for ( uint8_t i = 0; i < webServer->args(); i++ ) {
     message += " " + webServer->argName ( i ) + ": " + webServer->arg ( i ) + "\n";
   }
-  
+
   webServer->sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   webServer->sendHeader("Pragma", "no-cache");
   webServer->sendHeader("Expires", "-1");
@@ -867,4 +917,3 @@ boolean isIp(String str)
 }
 
 #endif  // USE_WEBSERVER
-
