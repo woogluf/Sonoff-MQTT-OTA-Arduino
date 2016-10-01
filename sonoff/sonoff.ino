@@ -1,6 +1,6 @@
 /*
  * Sonoff, ElectroDragon and Wkaku by Theo Arends
- * 
+ *
  * ==================================================
  * Prerequisites:
  *   Change libraries/PubSubClient/src/PubSubClient.h
@@ -24,7 +24,9 @@
  *                       -------------                     |
  *                        | | | | | |                     Gnd
 */
-
+extern "C" {
+#include "user_interface.h"
+}
 #define VERSION                0x01002300   // 1.0.35
 
 #define SONOFF                 1            // Sonoff, Sonoff TH10/16
@@ -38,7 +40,7 @@
 #define AM2321                 22
 
 enum log_t   {LOG_LEVEL_NONE, LOG_LEVEL_ERROR, LOG_LEVEL_INFO, LOG_LEVEL_DEBUG, LOG_LEVEL_DEBUG_MORE, LOG_LEVEL_ALL};
-enum week_t  {Last, First, Second, Third, Fourth}; 
+enum week_t  {Last, First, Second, Third, Fourth};
 enum dow_t   {Sun=1, Mon, Tue, Wed, Thu, Fri, Sat};
 enum month_t {Jan=1, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec};
 enum wifi_t  {WIFI_STATUS, WIFI_SMARTCONFIG, WIFI_MANAGER, WIFI_WPSCONFIG};
@@ -223,7 +225,7 @@ void CFG_Default()
 void mqtt_publish(const char* topic, const char* data)
 {
   char log[TOPSZ+MESSZ];
-  
+
   mqttClient.publish(topic, data);
   snprintf_P(log, sizeof(log), PSTR("MQTT: %s = %s"), strchr(topic,'/')+1, data); // Skip topic prefix
   addLog(LOG_LEVEL_INFO, log);
@@ -295,10 +297,10 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
   char stopic[TOPSZ], svalue[MESSZ];
 
   int topic_len = strlen(topic);
-  char topicBuf[topic_len +1]; 
-  char dataBuf[data_len +1]; 
-  char dataBufUc[data_len +1]; 
-  
+  char topicBuf[topic_len +1];
+  char dataBuf[data_len +1];
+  char dataBufUc[data_len +1];
+
   memcpy(topicBuf, topic, topic_len);
   topicBuf[topic_len] = 0;
 
@@ -338,7 +340,7 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
     if (!strcmp(dataBufUc,"OFF") || !strcmp(dataBufUc,"STOP")) payload = 0;
     if (!strcmp(dataBufUc,"ON") || !strcmp(dataBufUc,"START") || !strcmp(dataBufUc,"USER")) payload = 1;
     if (!strcmp(dataBufUc,"TOGGLE") || !strcmp(dataBufUc,"ADMIN")) payload = 2;
-    
+
     if (!strcmp(type,"STATUS")) {
       if ((data_len == 0) || (payload < 0) || (payload > 7)) payload = 8;
       if ((payload == 0) || (payload == 8)) {
@@ -350,38 +352,38 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
         snprintf_P(svalue, sizeof(svalue), PSTR("PRM: GroupTopic %s, OtaUrl %s, Uptime %d Hr, Bootcount %d, SaveCount %d"),
           sysCfg.mqtt_grptopic, sysCfg.otaUrl, uptime, sysCfg.bootcount, sysCfg.saveFlag);
         if (payload == 0) mqtt_publish(stopic, svalue);
-      }          
+      }
       if ((payload == 0) || (payload == 2)) {
         snprintf_P(svalue, sizeof(svalue), PSTR("FWR: Version %s, Boot %d, SDK %s"),
           Version, ESP.getBootVersion(), ESP.getSdkVersion());
         if (payload == 0) mqtt_publish(stopic, svalue);
-      }          
+      }
       if ((payload == 0) || (payload == 3)) {
         snprintf_P(svalue, sizeof(svalue), PSTR("LOG: Seriallog %d, Weblog %d, Syslog %d, LogHost %s, SSId %s, Password %s, TelePeriod %d"),
           sysCfg.seriallog_level, sysCfg.weblog_level, sysCfg.syslog_level, sysCfg.syslog_host, sysCfg.sta_ssid, sysCfg.sta_pwd, sysCfg.tele_period);
         if (payload == 0) mqtt_publish(stopic, svalue);
-      }          
+      }
       if ((payload == 0) || (payload == 4)) {
         snprintf_P(svalue, sizeof(svalue), PSTR("MEM: Sketch size %dkB, Free %dkB (Heap %dkB), Spiffs start %dkB (%dkB), Flash size %dkB (%dkB)"),
           ESP.getSketchSize()/1024, ESP.getFreeSketchSpace()/1024, ESP.getFreeHeap()/1024, ((uint32_t)&_SPIFFS_start - 0x40200000)/1024,
           (((uint32_t)&_SPIFFS_end - 0x40200000) - ((uint32_t)&_SPIFFS_start - 0x40200000))/1024, ESP.getFlashChipRealSize()/1024, ESP.getFlashChipSize()/1024);
         if (payload == 0) mqtt_publish(stopic, svalue);
-      }          
+      }
       if ((payload == 0) || (payload == 5)) {
         snprintf_P(svalue, sizeof(svalue), PSTR("NET: Host %s, IP %s, Gateway %s, Subnetmask %s, Mac %s, Webserver %d, WifiConfig %d"),
           Hostname, WiFi.localIP().toString().c_str(), WiFi.gatewayIP().toString().c_str(), WiFi.subnetMask().toString().c_str(),
           WiFi.macAddress().c_str(), sysCfg.webserver, sysCfg.sta_config);
         if (payload == 0) mqtt_publish(stopic, svalue);
-      }          
+      }
       if ((payload == 0) || (payload == 6)) {
         snprintf_P(svalue, sizeof(svalue), PSTR("MQT: Host %s, Port %d, Client %s (%s), User %s, Password %s, MAX_PACKET_SIZE %d, KEEPALIVE %d"),
-          sysCfg.mqtt_host, sysCfg.mqtt_port, sysCfg.mqtt_client, MQTTClient, sysCfg.mqtt_user, sysCfg.mqtt_pwd, MQTT_MAX_PACKET_SIZE, MQTT_KEEPALIVE); 
+          sysCfg.mqtt_host, sysCfg.mqtt_port, sysCfg.mqtt_client, MQTTClient, sysCfg.mqtt_user, sysCfg.mqtt_pwd, MQTT_MAX_PACKET_SIZE, MQTT_KEEPALIVE);
         if (payload == 0) mqtt_publish(stopic, svalue);
-      }      
+      }
       if ((payload == 0) || (payload == 7)) {
         snprintf_P(svalue, sizeof(svalue), PSTR("TIM: UTC %s, Local %s, Start DST %s, End DST %s"),
-          rtc_time(0).c_str(), rtc_time(1).c_str(), rtc_time(2).c_str(), rtc_time(3).c_str()); 
-      }      
+          rtc_time(0).c_str(), rtc_time(1).c_str(), rtc_time(2).c_str(), rtc_time(3).c_str());
+      }
     }
     else if (!strcmp(type,"SAVEDATA")) {
       if ((data_len > 0) && (payload >= 0) && (payload <= 3600)) {
@@ -565,7 +567,7 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
     }
     else if (!strcmp(type,"RESTART")) {
       switch (payload) {
-      case 1: 
+      case 1:
         restartflag = 2;
         snprintf_P(svalue, sizeof(svalue), PSTR("Restarting"));
         break;
@@ -579,7 +581,7 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
     }
     else if (!strcmp(type,"RESET")) {
       switch (payload) {
-      case 1: 
+      case 1:
         restartflag = 211;
         snprintf_P(svalue, sizeof(svalue), PSTR("Reset and Restarting"));
         break;
@@ -626,9 +628,9 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
       snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/SYNTAX"), PUB_PREFIX, sysCfg.mqtt_topic);
 #ifdef USE_WEBSERVER
       snprintf_P(svalue, sizeof(svalue), PSTR("Status, Upgrade, Otaurl, Restart, Reset, WifiConfig, Seriallog, Weblog, Syslog, LogHost, LogPort, SSId, Password%s, Webserver"), (!grpflg) ? ", Hostname" : "");
-#else      
+#else
       snprintf_P(svalue, sizeof(svalue), PSTR("Status, Upgrade, Otaurl, Restart, Reset, WifiConfig, Seriallog, Syslog, LogHost, LogPort, SSId, Password%s"), (!grpflg) ? ", Hostname" : "");
-#endif      
+#endif
       mqtt_publish(stopic, svalue);
       snprintf_P(svalue, sizeof(svalue), PSTR("MqttHost, MqttPort, MqttUser, MqttPassword%s, GroupTopic, Timezone, Light, Power, Ledstate, TelePeriod"), (!grpflg) ? ", MqttClient, Topic, ButtonTopic" : "");
     }
@@ -676,11 +678,11 @@ void every_second()
 {
   char stopic[TOPSZ], svalue[TOPSZ];
   float t, h;
-    
+
   if (sysCfg.tele_period) {
     tele_period++;
     if (tele_period == sysCfg.tele_period -1) {
-      
+
 #ifdef SEND_TELEMETRY_DS18B20
       dsb_readTempPrep();
 #endif  // SEND_TELEMETRY_DS18B20
@@ -730,8 +732,8 @@ void every_second()
       mqtt_publish(stopic, svalue);
     }
   }
-  
-  if ((rtcTime.Minute == 2) && (rtcTime.Second == 30)) { 
+
+  if ((rtcTime.Minute == 2) && (rtcTime.Second == 30)) {
     uptime++;
     snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/UPTIME"), PUB_PREFIX2, sysCfg.mqtt_topic);
     snprintf_P(svalue, sizeof(svalue), PSTR("%d"), uptime);
@@ -753,7 +755,7 @@ void stateloop()
 {
   uint8_t button;
   char scmnd[20], log[LOGSZ], stopic[TOPSZ], svalue[TOPSZ];
-  
+
   timerxs = millis() + (1000 / STATES);
   state++;
   if (state == STATES) {             // Every second
@@ -789,8 +791,8 @@ void stateloop()
       if (strcmp(sysCfg.mqtt_topic2,"0") && (multipress == 1) && mqttClient.connected()) {
         send_button(scmnd);          // Execute command via MQTT using ButtonTopic to sync external clients
       } else {
-        do_cmnd(scmnd);              // Execute command internally 
-      }  
+        do_cmnd(scmnd);              // Execute command internally
+      }
       multipress = 0;
     }
   }
@@ -808,7 +810,7 @@ void stateloop()
       if (sysCfg.ledstate) digitalWrite(LED_PIN, (LED_INVERTED) ? !sysCfg.power : sysCfg.power);
     }
   }
-  
+
   switch (state) {
   case (STATES/10)*2:
     if (otaflag) {
@@ -965,7 +967,7 @@ void setup()
     if (sysCfg.version < 0x01002300) {  // 1.0.35 - Add default savedata flag
       sysCfg.savedata = 1;
     }
-    
+
     sysCfg.version = VERSION;
   }
   sysCfg.bootcount++;
@@ -1029,7 +1031,6 @@ void loop()
 #ifdef USE_SERIAL
   if (Serial.available()) serial();
 #endif  // USE_SERIAL
-  
+
   yield();
 }
-
