@@ -28,14 +28,6 @@ extern "C" {
 #include "user_interface.h"
 }
 
-#include "support.h"
-#include "webserver.h"
-
-struct SYSCFG sysCfg;
-struct TIME_T rtcTime;
-TimeChangeRule myDST = { TIME_DST };  // Daylight Saving Time
-TimeChangeRule mySTD = { TIME_STD };  // Standard Time
-
 #include <ESP8266WiFi.h>        // MQTT, Ota, WifiManager
 #include <ESP8266HTTPClient.h>  // MQTT, Ota
 #include <ESP8266httpUpdate.h>  // Ota
@@ -50,6 +42,13 @@ TimeChangeRule mySTD = { TIME_STD };  // Standard Time
 #ifdef USE_SPIFFS
   #include <FS.h>               // Config
 #endif
+#include "support.h"
+#include "webserver.h"
+
+struct SYSCFG sysCfg;
+struct TIME_T rtcTime;
+TimeChangeRule myDST = { TIME_DST };  // Daylight Saving Time
+TimeChangeRule mySTD = { TIME_STD };  // Standard Time
 
 int16_t savedatacounter;
 char Version[16];
